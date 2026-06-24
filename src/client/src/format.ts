@@ -21,6 +21,22 @@ export function pct(value: number, digits = 1): string {
   return `${number(value, digits)}%`;
 }
 
+/** Signed percent, e.g. +2.3% / -1.1%, for change indicators. */
+export function signedPct(value: number, digits = 2): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${number(value, digits)}%`;
+}
+
+/** Plain USD price with thousands separators, e.g. 67,240.50. */
+export function usdPrice(value: number, digits = 2): string {
+  return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+/** Whole BTC count with thousands separators. */
+export function btcAmount(value: number): string {
+  return Math.round(value).toLocaleString("en-US");
+}
+
 export function dateTime(value: string): string {
   return new Intl.DateTimeFormat("zh-CN", {
     month: "2-digit",
