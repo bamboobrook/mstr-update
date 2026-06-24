@@ -21,6 +21,7 @@ import type {
   Security,
   SourceMeta
 } from "../../shared/types";
+import { preferredLiquidationPreferenceUsd } from "./fallback";
 
 export interface FetchedData {
   securities: Security[];
@@ -79,10 +80,48 @@ function textFromHtml(html: string): string {
   return $.text().replace(/\s+/g, " ").trim();
 }
 
-export async function fetchMarketPrices(): Promise<{ btcPriceUsd: number; mstrPriceUsd: number; sources: SourceMeta[]; warnings: string[] }> {
+interface QuoteResult {
+  symbol: string;
+  priceUsd: number;
+  previousCloseUsd?: number;
+  change24hPct?: number;
+  source: SourceMeta;
+}
+
+async function fetchYahooQuote(symbol: string): Promise<QuoteResult> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=5d&interval=1d`;
+  const json = JSON.parse(await fetchText(url)) as {
+    chart?: {
+      result?: Array<{
+        meta?: {
+          regularMarketPrice?: number;
+          chartPreviousClose?: number;
+          previousClose?: number;
+          longName?: string;
+          shortName?: string;
+        };
+      }>;
+      error?: { description?: string };
+    };
+  };
+  const meta = json.chart?.result?.[0]?.meta;
+  const price = meta?.regularMarketPrice;
+  if (!price) throw new Error(json.chart?.error?.description ?? `${symbol} Yahoo response did not include regularMarketPrice`);
+  const previousClose = meta.chartPreviousClose ?? meta.previousClose;
+  return {
+    symbol,
+    priceUsd: price,
+    previousCloseUsd: previousClose,
+    change24hPct: previousClose && previousClose > 0 ? ((price - previousClose) / previousClose) * 100 : undefined,
+    source: source(`Yahoo Finance ${symbol} delayed quote`, url, "parsed")
+  };
+}
+
+export async function fetchMarketPrices(): Promise<{ securities: Security[]; btcPriceUsd: number; mstrPriceUsd: number; sources: SourceMeta[]; warnings: string[] }> {
   const warnings: string[] = [];
   let btcPriceUsd = 105_000;
   let mstrPriceUsd = 360;
+  const securities: Security[] = [];
   const sources: SourceMeta[] = [];
 
   try {
@@ -91,22 +130,28 @@ export async function fetchMarketPrices(): Promise<{ btcPriceUsd: number; mstrPr
     ) as { bitcoin?: { usd?: number; usd_24h_change?: number } };
     if (json.bitcoin?.usd) {
       btcPriceUsd = json.bitcoin.usd;
-      sources.push(source("CoinGecko BTC spot", "https://api.coingecko.com/api/v3/simple/price", "parsed"));
+      const btcSource = source("CoinGecko BTC spot", "https://api.coingecko.com/api/v3/simple/price", "parsed");
+      sources.push(btcSource);
+      securities.push({
+        symbol: "BTC",
+        name: "Bitcoin",
+        type: "bitcoin",
+        priceUsd: btcPriceUsd,
+        change24hPct: json.bitcoin.usd_24h_change,
+        source: btcSource
+      });
     }
   } catch (error) {
     warnings.push(`BTC price fallback used: ${(error as Error).message}`);
   }
+  if (!securities.some((item) => item.symbol === "BTC")) {
+    securities.push(fallbackSecurities(btcPriceUsd, mstrPriceUsd)[0]);
+  }
 
   const quoteAttempts = [
     async () => {
-      const url = "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?range=1d&interval=1d";
-      const json = JSON.parse(await fetchText(url)) as {
-        chart?: { result?: Array<{ meta?: { regularMarketPrice?: number; previousClose?: number } }> };
-      };
-      const meta = json.chart?.result?.[0]?.meta;
-      const price = meta?.regularMarketPrice ?? meta?.previousClose;
-      if (!price) throw new Error("Yahoo response did not include regularMarketPrice");
-      return { price, source: source("Yahoo Finance MSTR delayed quote", url, "parsed") };
+      const quote = await fetchYahooQuote("MSTR");
+      return { price: quote.priceUsd, source: quote.source, quote };
     },
     async () => {
       const url = "https://stooq.com/q/l/?s=mstr.us&f=sd2t2ohlcv&h&e=csv";
@@ -115,7 +160,12 @@ export async function fetchMarketPrices(): Promise<{ btcPriceUsd: number; mstrPr
       const values = lines[1]?.split(",");
       const close = Number(values?.[6]);
       if (!Number.isFinite(close) || close <= 0) throw new Error("Stooq response did not include close");
-      return { price: close, source: source("Stooq MSTR delayed quote", url, "parsed") };
+      const quote: QuoteResult = {
+        symbol: "MSTR",
+        priceUsd: close,
+        source: source("Stooq MSTR delayed quote", url, "parsed")
+      };
+      return { price: close, source: quote.source, quote };
     }
   ];
 
@@ -125,6 +175,15 @@ export async function fetchMarketPrices(): Promise<{ btcPriceUsd: number; mstrPr
       const result = await attempt();
       mstrPriceUsd = result.price;
       sources.push(result.source);
+      securities.push({
+        symbol: "MSTR",
+        name: "Strategy common stock",
+        type: "common",
+        priceUsd: result.price,
+        previousCloseUsd: result.quote?.previousCloseUsd,
+        change24hPct: result.quote?.change24hPct,
+        source: result.source
+      });
       quoteError = "";
       break;
     } catch (error) {
@@ -132,8 +191,31 @@ export async function fetchMarketPrices(): Promise<{ btcPriceUsd: number; mstrPr
     }
   }
   if (quoteError) warnings.push(`MSTR price fallback used: ${quoteError}`);
+  if (!securities.some((item) => item.symbol === "MSTR")) {
+    securities.push(fallbackSecurities(btcPriceUsd, mstrPriceUsd)[1]);
+  }
 
-  return { btcPriceUsd, mstrPriceUsd, sources, warnings };
+  for (const symbol of ["STRC", "STRD", "STRK", "STRF"]) {
+    try {
+      const quote = await fetchYahooQuote(symbol);
+      sources.push(quote.source);
+      securities.push({
+        symbol,
+        name: `Strategy preferred stock ${symbol}`,
+        type: "preferred",
+        priceUsd: quote.priceUsd,
+        previousCloseUsd: quote.previousCloseUsd,
+        change24hPct: quote.change24hPct,
+        liquidationPreferenceUsd: preferredLiquidationPreferenceUsd,
+        discountToPreferencePct: ((preferredLiquidationPreferenceUsd - quote.priceUsd) / preferredLiquidationPreferenceUsd) * 100,
+        source: quote.source
+      });
+    } catch (error) {
+      warnings.push(`${symbol} preferred quote fallback used: ${(error as Error).message}`);
+    }
+  }
+
+  return { securities, btcPriceUsd, mstrPriceUsd, sources, warnings };
 }
 
 export async function fetchStrategyPages(): Promise<{
@@ -270,7 +352,20 @@ export async function fetchStrategyPages(): Promise<{
 export async function fetchAllData(): Promise<FetchedData> {
   const market = await fetchMarketPrices();
   const strategy = await fetchStrategyPages();
-  const securities = fallbackSecurities(market.btcPriceUsd, market.mstrPriceUsd);
+  const preferredYieldBySymbol = new Map(
+    strategy.preferredSeries.map((series) => [series.symbol, series.dividendRatePct] as const)
+  );
+  const securities = market.securities.map((security) =>
+    security.type === "preferred"
+      ? {
+          ...security,
+          dividendYieldPct:
+            security.priceUsd > 0
+              ? ((preferredYieldBySymbol.get(security.symbol) ?? 0) * preferredLiquidationPreferenceUsd) / security.priceUsd
+              : undefined
+        }
+      : security
+  );
 
   return {
     securities,

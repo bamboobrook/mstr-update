@@ -201,6 +201,48 @@ a {
   color: var(--text-secondary);
 }
 
+.preferred-ticker-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mini-price-pill {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mini-price-pill strong {
+  color: var(--text-primary);
+}
+
+.mini-price-pill em {
+  font-style: normal;
+  font-size: 10px;
+}
+
+.mini-price-pill em.up {
+  color: var(--mint);
+}
+
+.mini-price-pill em.down {
+  color: var(--red);
+}
+
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -651,6 +693,15 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+.scenario-numbers .num-cell em {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.3;
+}
+
 /* ============================================================
    ATM list
    ============================================================ */
@@ -889,6 +940,10 @@ a {
 .data-table tbody td.num {
   text-align: right;
   font-weight: 600;
+}
+
+.data-table tbody td.negative {
+  color: var(--red);
 }
 
 .tag {

@@ -1,4 +1,4 @@
-import { Banknote, Bitcoin, CalendarClock, Gauge, WalletCards } from "lucide-react";
+import { Banknote, Bitcoin, CalendarClock, Gauge, Layers3, WalletCards } from "lucide-react";
 import type { DashboardSnapshot, ScenarioResult } from "../../../shared/types";
 import { compactCnyLike, compactUsd, number } from "../format";
 import { Metric } from "./Metric";
@@ -52,10 +52,18 @@ export function KpiStrip({ snapshot, scenario }: KpiStripProps) {
         icon={<Gauge size={18} />}
       />
       <Metric
-        label="BTC 持仓盈亏"
-        labelEn="BTC Position P&L"
-        value={`${btcPnl >= 0 ? "+" : ""}${compactCnyLike(btcPnl)}`}
-        sub={`${btcPnl >= 0 ? "+" : ""}${number(btcPnlPct, 1)}% 未实现损益`}
+        label="MSTR mNAV"
+        labelEn="Market NAV"
+        value={`${number(reserve.mnav, 2)}x`}
+        sub={`每股含币 ${number(reserve.bitcoinPerShare * 1000, 3)} BTC / 1000股`}
+        tone={reserve.mnav >= 1.25 ? "green" : reserve.mnav >= 1.05 ? "amber" : "red"}
+        icon={<Layers3 size={18} />}
+      />
+      <Metric
+        label="每股含币量"
+        labelEn="BTC Per Share"
+        value={number(reserve.bitcoinPerShare, 6)}
+        sub={`BTC 盈亏 ${btcPnl >= 0 ? "+" : ""}${number(btcPnlPct, 1)}% · ${compactCnyLike(btcPnl)}`}
         tone={pnlTone}
         icon={<Bitcoin size={18} />}
       />

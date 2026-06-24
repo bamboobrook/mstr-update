@@ -106,14 +106,17 @@ export function ScenarioLab({ input, result, onChange }: ScenarioLabProps) {
           <div className="num-cell">
             <span>ATM 净流入</span>
             <strong>{compactCnyLike(result.atmLiquidityUsd)}</strong>
+            <em>有效执行 {number(result.effectiveAtmExecutionPct, 1)}%</em>
           </div>
           <div className="num-cell">
             <span>卖币净流入</span>
             <strong>{compactCnyLike(result.btcSaleLiquidityUsd)}</strong>
+            <em>BTC 市值 {compactCnyLike(result.bitcoinMarketValueUsd)}</em>
           </div>
           <div className="num-cell">
             <span>年化支出</span>
             <strong>{compactCnyLike(result.annualObligationUsd)}</strong>
+            <em>mNAV {number(result.mnav, 2)}x · 债务覆盖 {number(result.btcAssetCoverageRatio, 1)}x</em>
           </div>
         </div>
       </Panel>

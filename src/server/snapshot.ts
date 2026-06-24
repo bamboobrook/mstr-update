@@ -1,7 +1,7 @@
 import { buildReserveSnapshot } from "../shared/calc";
 import type { DashboardSnapshot, ScenarioInput } from "../shared/types";
 import { fetchAllData } from "./data/fetchers";
-import { source } from "./data/fallback";
+import { assumedDilutedShares, source } from "./data/fallback";
 import { getLatestSnapshot, saveSnapshot } from "./db";
 
 export async function buildSnapshot(): Promise<DashboardSnapshot> {
@@ -14,6 +14,8 @@ export async function buildSnapshot(): Promise<DashboardSnapshot> {
     btcHoldings: data.btcHoldings,
     btcPriceUsd,
     btcCostBasisUsd: data.btcCostBasisUsd,
+    mstrPriceUsd,
+    assumedDilutedShares,
     preferredSeries: data.preferredSeries,
     debt: data.debt,
     atmPrograms: data.atmPrograms,

@@ -32,6 +32,9 @@ export const officialSources = {
   secSubmissions: "https://data.sec.gov/submissions/CIK0001050446.json"
 };
 
+export const assumedDilutedShares = 306_800_000;
+export const preferredLiquidationPreferenceUsd = 100;
+
 export const fallbackPreferred: PreferredSeries[] = [
   {
     symbol: "STRC",
@@ -203,7 +206,7 @@ export function fallbackSecurities(btcPriceUsd: number, mstrPriceUsd: number): S
       name: "Strategy common stock",
       type: "common",
       priceUsd: mstrPriceUsd,
-      source: source("Stooq quote", "https://stooq.com/q/l/?s=mstr.us&f=sd2t2ohlcv&h&e=csv", "parsed")
+      source: source("Yahoo Finance MSTR delayed quote", "https://query1.finance.yahoo.com/v8/finance/chart/MSTR", "parsed")
     }
   ];
 }

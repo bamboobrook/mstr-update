@@ -48,6 +48,13 @@ describe("MSTR calculations", () => {
       bitcoinHoldings: 2,
       bitcoinMarketValueUsd: 200_000,
       bitcoinCostBasisUsd: 80_000,
+      bitcoinUnrealizedPnlUsd: 120_000,
+      bitcoinUnrealizedPnlPct: 150,
+      bitcoinPerShare: 0.1,
+      assumedDilutedShares: 20,
+      mnav: 0.03,
+      mstrMarketCapUsd: 6_000,
+      btcAssetCoverageRatio: 40,
       annualPreferredDividendUsd: 800,
       annualDebtInterestUsd: 100,
       annualDebtAndDividendUsd: 900,
@@ -75,5 +82,56 @@ describe("MSTR calculations", () => {
 
     expect(result.riskLevel).toMatch(/high|critical/);
     expect(result.bottlenecks.length).toBeGreaterThan(2);
+  });
+
+  it("makes BTC price affect risk even when BTC sale is zero", () => {
+    const atm: AtmProgram[] = [
+      { symbol: "MSTR", label: "MSTR", type: "common", authorizedUsd: 10_000, soldUsd: 2_000, remainingUsd: 8_000, color: "#8fdc5c", source }
+    ];
+    const preferred: PreferredSeries[] = [
+      { symbol: "STRK", label: "STRK", notionalUsd: 10_000, dividendRatePct: 8, annualDividendUsd: 800, floating: false, source }
+    ];
+    const debt: DebtInstrument[] = [
+      { id: "d1", label: "Debt", principalUsd: 5_000, couponPct: 2, annualInterestUsd: 100, maturityYear: 2028, convertible: true, source }
+    ];
+    const reserve: ReserveSnapshot = {
+      cashUsd: 1_000,
+      bitcoinHoldings: 2,
+      bitcoinMarketValueUsd: 120_000,
+      bitcoinCostBasisUsd: 80_000,
+      bitcoinUnrealizedPnlUsd: 40_000,
+      bitcoinUnrealizedPnlPct: 50,
+      bitcoinPerShare: 0.1,
+      assumedDilutedShares: 20,
+      mnav: 1.5,
+      mstrMarketCapUsd: 180_000,
+      btcAssetCoverageRatio: 24,
+      annualPreferredDividendUsd: 800,
+      annualDebtInterestUsd: 100,
+      annualDebtAndDividendUsd: 900,
+      debtPrincipalUsd: 5_000,
+      netCashAfterDebtPrincipalUsd: -4_000,
+      cashCoverageMonths: 13.3,
+      atmCoverageYears: 8.8,
+      allLiquidityCoverageYears: 10,
+      source
+    };
+    const base = {
+      mstrPriceUsd: 9_000,
+      atmExecutionPct: 50,
+      preferredRateShockBps: 300,
+      marketDiscountPct: 15,
+      streEurUsd: 1.1,
+      includeDebtPrincipal: false,
+      sellBtcPct: 0
+    };
+
+    const lowBtc = runScenario({ reserve, atmPrograms: atm, preferredSeries: preferred, debt }, { ...base, btcPriceUsd: 20_000 });
+    const highBtc = runScenario({ reserve, atmPrograms: atm, preferredSeries: preferred, debt }, { ...base, btcPriceUsd: 100_000 });
+
+    expect(lowBtc.mnav).not.toBe(highBtc.mnav);
+    expect(lowBtc.btcAssetCoverageRatio).toBeLessThan(highBtc.btcAssetCoverageRatio);
+    expect(lowBtc.effectiveAtmExecutionPct).not.toBe(highBtc.effectiveAtmExecutionPct);
+    expect(lowBtc.bottlenecks.join(" ")).toContain("BTC");
   });
 });

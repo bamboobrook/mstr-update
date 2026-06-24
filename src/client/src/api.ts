@@ -1,9 +1,13 @@
 import type { DashboardSnapshot, ScenarioInput, ScenarioResult, SourceStatus } from "../../shared/types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const hasBody = init?.body !== undefined && init.body !== null;
+  if (hasBody && !headers.has("content-type")) headers.set("content-type", "application/json");
+
   const response = await fetch(url, {
-    headers: { "content-type": "application/json" },
-    ...init
+    ...init,
+    headers
   });
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return (await response.json()) as T;

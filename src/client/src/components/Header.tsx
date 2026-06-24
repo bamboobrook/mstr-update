@@ -1,6 +1,6 @@
 import { Bitcoin, LineChart as LineChartIcon, RefreshCw } from "lucide-react";
 import type { DashboardSnapshot } from "../../../shared/types";
-import { compactUsd, number } from "../format";
+import { compactUsd, number, signedPct } from "../format";
 
 interface HeaderProps {
   snapshot: DashboardSnapshot;
@@ -12,6 +12,7 @@ interface HeaderProps {
 export function Header({ snapshot, loading, onRefresh }: HeaderProps) {
   const btc = snapshot.securities.find((item) => item.symbol === "BTC");
   const mstr = snapshot.securities.find((item) => item.symbol === "MSTR");
+  const preferredPrices = snapshot.securities.filter((item) => ["STRC", "STRD", "STRK", "STRF"].includes(item.symbol));
 
   return (
     <header className="app-header">
@@ -36,6 +37,15 @@ export function Header({ snapshot, loading, onRefresh }: HeaderProps) {
           <span className="px-symbol">MSTR</span>
           <span>${number(mstr?.priceUsd ?? 0, 2)}</span>
         </span>
+        <div className="preferred-ticker-strip">
+          {preferredPrices.map((security) => (
+            <span className="mini-price-pill" key={security.symbol} title={`${security.symbol} 折价 ${number(security.discountToPreferencePct ?? 0, 1)}%`}>
+              <span>{security.symbol}</span>
+              <strong>${number(security.priceUsd, 2)}</strong>
+              <em className={(security.change24hPct ?? 0) >= 0 ? "up" : "down"}>{signedPct(security.change24hPct ?? 0, 1)}</em>
+            </span>
+          ))}
+        </div>
         <button className="icon-button" onClick={onRefresh} title="刷新公开数据 / Refresh">
           <RefreshCw size={17} className={loading ? "spin" : ""} />
         </button>

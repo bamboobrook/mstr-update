@@ -15,6 +15,10 @@ export interface Security {
   type: "common" | "preferred" | "bitcoin" | "cash";
   priceUsd: number;
   change24hPct?: number;
+  previousCloseUsd?: number;
+  liquidationPreferenceUsd?: number;
+  discountToPreferencePct?: number;
+  dividendYieldPct?: number;
   source: SourceMeta;
 }
 
@@ -66,6 +70,13 @@ export interface ReserveSnapshot {
   bitcoinHoldings: number;
   bitcoinMarketValueUsd: number;
   bitcoinCostBasisUsd: number;
+  bitcoinUnrealizedPnlUsd: number;
+  bitcoinUnrealizedPnlPct: number;
+  bitcoinPerShare: number;
+  assumedDilutedShares: number;
+  mnav: number;
+  mstrMarketCapUsd: number;
+  btcAssetCoverageRatio: number;
   annualPreferredDividendUsd: number;
   annualDebtInterestUsd: number;
   annualDebtAndDividendUsd: number;
@@ -94,7 +105,12 @@ export interface ScenarioResult {
   runwayYears: number;
   cashCoverageMonths: number;
   atmLiquidityUsd: number;
+  effectiveAtmExecutionPct: number;
   btcSaleLiquidityUsd: number;
+  bitcoinMarketValueUsd: number;
+  mnav: number;
+  btcAssetCoverageRatio: number;
+  bitcoinUnrealizedPnlUsd: number;
   annualObligationUsd: number;
   debtPrincipalIncludedUsd: number;
   bottlenecks: string[];

@@ -29,6 +29,14 @@ export function BtcPosition({ snapshot }: BtcPositionProps) {
   return (
     <Panel title="BTC 持仓详情" subtitle="Bitcoin Position" icon={<Bitcoin size={16} />}>
       <div className="position-stats">
+        <div className="stat-cell">
+          <span>mNAV · Market NAV</span>
+          <strong>{number(reserve.mnav, 2)}x</strong>
+        </div>
+        <div className="stat-cell">
+          <span>每股含币 · BTC / Share</span>
+          <strong>{number(reserve.bitcoinPerShare, 6)}</strong>
+        </div>
         <div className={`stat-cell ${pnl >= 0 ? "positive" : "negative"}`}>
           <span>持仓量 · Holdings</span>
           <strong>{btcAmount(reserve.bitcoinHoldings)} BTC</strong>
